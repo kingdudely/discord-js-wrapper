@@ -1,3 +1,7 @@
+if (messages == undefined){
+    var messages = [];
+}
+
 var msg = {
     "send": "POST",
     "delete": "DELETE",
@@ -27,8 +31,22 @@ class config {
     }
 }
 
-function message(method, message, config, messageID = Date.now()) {
-    fetch("https://discord.com/api/v9/channels/" + config.channelID + "/messages" + ((method == msg.delete || method == msg.edit) ? "/" + messageID : ""), {
+async function message(method, message, config, messageID) {
+    var nomsgid = messageID == undefined;
+    if (nomsgid){
+        if (method == msg.send){
+            messageID = Date.now();
+        } else {
+            if (messages.length){
+                messageID = messages[messages.length - 1];
+            } else {
+                console.error("ERROR: NUMBER OF PREVIOUS MESSAGES SENT WITH MSG.SEND IS 0\n\nSEND A MESSAGE WITH MSG.SEND FIRST AND THEN USE MSG.EDIT/MSG.DELETE WITHOUT MESSAGE ID TO MANIPULATE THE MOST RECENT MESSAGE")
+                return null;
+            }
+        }
+    }
+    
+    var request = await fetch("https://discord.com/api/v9/channels/" + config.channelID + "/messages" + ((method == msg.delete || method == msg.edit) ? "/" + messageID : ""), {
         "headers": {
             "accept": "*/*",
             "accept-language": "en-US,en;q=0.9",
@@ -60,4 +78,11 @@ function message(method, message, config, messageID = Date.now()) {
         "mode": "cors",
         "credentials": "include"
     });
+
+    if (method == msg.send){
+        var json = await request.json();
+        messages[((messages.length != undefined) ? messages.length : 0)] = json.id;
+    } else if (method == msg.delete) {
+        messages.pop();
+    }
 }
