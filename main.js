@@ -1,32 +1,22 @@
-function run(func){
+function run(func) {
     let wpRequire;
     webpackChunkdiscord_app.push([
-      [Date.now()], // chunk ID. using the current time like this works fine
-      {}, // modules mapped `id: (wpModule, wpExports, wpRequire) => {}`. these chunks can be loaded by `wpRequire(id)`
-      _wpRequire => (wpRequire = _wpRequire), // callback that runs when this chunk is loaded (it will run immediately after calling push(). assigning wpRequre here to an outside variable makes it convenient to use
+        [Date.now()], // chunk ID. using the current time like this works fine
+        {}, // modules mapped `id: (wpModule, wpExports, wpRequire) => {}`. these chunks can be loaded by `wpRequire(id)`
+        _wpRequire => (wpRequire = _wpRequire), // callback that runs when this chunk is loaded (it will run immediately after calling push(). assigning wpRequre here to an outside variable makes it convenient to use
     ]);
-    for (var i in wpRequire.c){
+    for (var i in wpRequire.c) {
         let exports = wpRequire.c[i].exports;
-        if (typeof(exports?.[func]) == "function"){
+        if (typeof(exports?.[func]) == "function") {
             return exports?.[func]();
-        } else if (wpRequire.c[i].id == func){
+        } else if (wpRequire.c[i].id == func) {
             return wpRequire.c[i].id;
         }
     }
 }
 
-if (messages == undefined){
-    var messages = [];
-}
-
-var msg = {
-    "send": "POST",
-    "delete": "DELETE",
-    "edit": "PATCH"
-}
-
 String.prototype.lastIndexNotOf = function(searchString) {
-    for (var i = this.length; i > 0; i--) {
+    for (var i = this.length - 1; i >= 0; i--) {
         for (var x = 0; x < searchString.length; x++) {
             if (searchString.substr(x, 1) != this.substr(i - 1, 1) && x + 1 == searchString.length) {
                 return i;
@@ -36,74 +26,185 @@ String.prototype.lastIndexNotOf = function(searchString) {
     return -1;
 }
 
-function res(url) { // removeextraslash
-    var lino = url.lastIndexNotOf("/")
-    return url.substr(0, (lino != -1) ? lino : undefined);
+String.prototype.splitNth = function(nth) {
+    let result = [];
+
+    for (let i = 0; i < this.length; i += nth) {
+        result[i / nth] = this.substr(i, nth);
+    }
+
+    return result;
 }
-class config {
-    constructor(token = run("getToken"), url = window.location.href){ // channelID = res(url).substr(res(url).lastIndexOf("/") + 1)
-        this.token = token;
-        this.url = res(url);
+
+var Binary = {
+    get_bit_count: function(n) {
+        let result = 0;
+
+        while (n !== 0) {
+            n = n >> 1;
+            result++;
+        }
+
+        return result;
+    },
+
+    from_decimal: function(n, minBitCount = 0) {
+        let result = "";
+        let nBits = this.get_bit_count(n);
+
+        for (i = nBits - 1; i >= 0; i--) {
+            result += ((n >> i) & 1).toString()
+        }
+
+        result = "0".repeat((minBitCount || result.length) - result.length) + result;
+
+        return result || "0";
+    },
+
+    to_decimal: function(binary) {
+        let result = 0;
+
+        for (i = binary.length - 1; i >= 0; i--) {
+            result += (2 ** ((binary.length - 1) - i)) * parseInt(binary.charAt(i));
+        }
+
+        return result;
+    },
+
+    from_string: function(string) {
+        let result = [];
+
+        for (let i = 0; i < string.length; i++) {
+            result[i] = this.from_decimal(string.charCodeAt(i), 8);
+        }
+
+        return result;
+    }
+}
+
+var Base64 = {
+    _valid_characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+    decode: function(string) {
+        string = string.replaceAll("=", "");
+        let result = [];
+        for (let i = 0; i < string.length; i++) {
+            result[i] = Binary.from_decimal(this._valid_characters.indexOf(string[i]), 8).substr(2);
+        }
+        result = result.join("").splitNth(8);
+
+        if (result[result.length - 1].length < 8) {
+            result.pop();
+        }
+
+        for (let i = 0; i < result.length; i++) {
+            result[i] = String.fromCharCode(Binary.to_decimal(result[i]));
+        }
+
+        return result.join("");
+    },
+
+    encode: function(string) {
+        let result = Binary.from_string(string).join("");
+
+        result = result.splitNth(6);
+
+        result[result.length - 1] += "0".repeat(6 - result[result.length - 1].length);
+
+        for (let i = 0; i < result.length; i++) {
+            result[i] = this._valid_characters.charAt(Binary.to_decimal(result[i]));
+        }
+
+        while (result.length % 4 !== 0) {
+            result.push("=");
+        }
+
+        return result.join("");
+    }
+}
+
+class location_config {
+    constructor(url = window.location.href) {
+        this.url = url;
         this.channelID = url.substr(url.lastIndexOf("/") + 1);
         this.guildID = url.substr(url.substr(0, url.lastIndexOf("/")).lastIndexOf("/") + 1, url.lastIndexOf("/") - url.substr(0, url.lastIndexOf("/")).lastIndexOf("/") - 1);
     }
 }
 
-async function message(method, message, config, replyMsgID, messageID) {
-    var nomsgid = messageID == undefined;
-    if (nomsgid){
-        if (method == msg.send){
-            messageID = Date.now();
-        } else {
-            if (messages.length){
-                messageID = messages[messages.length - 1];
-            } else {
-                console.error("ERROR: NUMBER OF PREVIOUS MESSAGES SENT WITH MSG.SEND IS 0\n\nSEND A MESSAGE WITH MSG.SEND FIRST AND THEN USE MSG.EDIT/MSG.DELETE WITHOUT MESSAGE ID TO MANIPULATE THE MOST RECENT MESSAGE")
-                return null;
-            }
-        }
-    }
-    var body = {
-        "mobile_network_type": "unknown",
-        "content": message,
-        "nonce": parseInt(messageID),
-        "tts": false,
-        "flags": 0
-    }
-    var vldrID = await fetch("https://discord.com/api/v9/channels/" + config.channelID + "/messages/" + replyMsgID, {
-        method: "PATCH",
-        headers: {
-            "authorization": config.token
-        }
-    }) // valid reply message ID
-    .then(response => response.json())
-    .then(data => {
-        if (replyMsgID){
-            body["message_reference"] = {
-                "message_id": replyMsgID,
-                "channel_id": config.channelID,
-                "guild_id": ((config.guildID == "@me") ? null : config.guildID)
-            }
-        }
-    })
-    .catch(error => {});
-    var request = await fetch("https://discord.com/api/v9/channels/" + config.channelID + "/messages" + ((method == msg.delete || method == msg.edit) ? "/" + messageID : ""), {
-        "headers": {
-            "authorization": config.token,
-            "content-type": "application/json",
-        },
-        "referrer": config.url,
-        "referrerPolicy": "strict-origin-when-cross-origin",
-        "body": JSON.stringify(body),
-        "method": method,
-        "mode": "cors",
-        "credentials": "include"
-    });
+class User {
+    constructor(token = run("getToken"), url_config = new location_config()) {
+        this.token = token;
+        this.url_config = url_config;
+        this.id = Base64.decode(token.match("^[^.]+")[0]);
+        this.message = {
+            get_last_message: async () => {
+                let result = "";
 
-    if (method == msg.send){
-        var json = await request.json();
-        messages[((messages.length != undefined) ? messages.length : 0)] = json.id;
-    } else if (method == msg.delete) {
-        messages.pop();
+                let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/search?author_id=${this.id}`, {
+                    "headers": {
+                        "authorization": this.token,
+                    },
+                    "method": "GET",
+                }).then(data => data.json()).then(response => {
+                    result = response.messages[0][0].id
+                });
+                return result;
+            },
+            send: (text) => {
+                let body = {
+                    "mobile_network_type": "unknown",
+                    "content": text,
+                    "nonce": Date.now(),
+                    "tts": false,
+                    "flags": 0
+                };
+                fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages`, {
+                    "headers": {
+                        "authorization": this.token,
+                        "content-type": "application/json",
+                    },
+                    "body": JSON.stringify(body),
+                    "method": "POST",
+                });
+            },
+            delete: async (id) => {
+                if (!id) {
+                    id = await this.message.get_last_message();
+                }
+
+                fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/${id}`, {
+                    "headers": {
+                        "authorization": this.token,
+                        "content-type": "application/json",
+                    },
+                    "method": "DELETE",
+                });
+            },
+            edit: async (text, id) => {
+                if (!id) {
+                    id = await this.message.get_last_message();
+                }
+
+                let body = {
+                    "mobile_network_type": "unknown",
+                    "message_reference": {
+                        "message_id": id,
+                        "channel_id": url_config.channelID,
+                        "guild_id": ((url_config.guildID == "@me") ? null : url_config.guildID)
+                    },
+                    "content": text,
+                    "nonce": Date.now(),
+                    "tts": false,
+                    "flags": 0
+                };
+                fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/${id}`, {
+                    "headers": {
+                        "authorization": this.token,
+                        "content-type": "application/json",
+                    },
+                    "body": JSON.stringify(body),
+                    "method": "PATCH",
+                });
+            },
+        };
     }
 }
