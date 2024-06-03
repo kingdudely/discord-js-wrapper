@@ -7,7 +7,7 @@ function run(func) {
     ]);
     for (var i in wpRequire.c) {
         let exports = wpRequire.c[i].exports;
-        if (typeof(exports?.[func]) == "function") {
+        if (typeof (exports?.[func]) == "function") {
             return exports?.[func]();
         } else if (wpRequire.c[i].id == func) {
             return wpRequire.c[i].id;
@@ -15,7 +15,7 @@ function run(func) {
     }
 }
 
-String.prototype.lastIndexNotOf = function(searchString) {
+String.prototype.lastIndexNotOf = function (searchString) {
     for (var i = this.length - 1; i >= 0; i--) {
         for (var x = 0; x < searchString.length; x++) {
             if (searchString.substr(x, 1) != this.substr(i - 1, 1) && x + 1 == searchString.length) {
@@ -26,7 +26,7 @@ String.prototype.lastIndexNotOf = function(searchString) {
     return -1;
 }
 
-String.prototype.splitNth = function(nth) {
+String.prototype.splitNth = function (nth) {
     let result = [];
 
     for (let i = 0; i < this.length; i += nth) {
@@ -37,7 +37,7 @@ String.prototype.splitNth = function(nth) {
 }
 
 var Binary = {
-    get_bit_count: function(n) {
+    get_bit_count: function (n) {
         let result = 0;
 
         while (n !== 0) {
@@ -48,7 +48,7 @@ var Binary = {
         return result;
     },
 
-    from_decimal: function(n, minBitCount = 0) {
+    from_decimal: function (n, minBitCount = 0) {
         let result = "";
         let nBits = this.get_bit_count(n);
 
@@ -61,7 +61,7 @@ var Binary = {
         return result || "0";
     },
 
-    to_decimal: function(binary) {
+    to_decimal: function (binary) {
         let result = 0;
 
         for (i = binary.length - 1; i >= 0; i--) {
@@ -71,7 +71,7 @@ var Binary = {
         return result;
     },
 
-    from_string: function(string) {
+    from_string: function (string) {
         let result = [];
 
         for (let i = 0; i < string.length; i++) {
@@ -84,7 +84,7 @@ var Binary = {
 
 var Base64 = {
     _valid_characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
-    decode: function(string) {
+    decode: function (string) {
         string = string.replaceAll("=", "");
         let result = [];
         for (let i = 0; i < string.length; i++) {
@@ -103,7 +103,7 @@ var Base64 = {
         return result.join("");
     },
 
-    encode: function(string) {
+    encode: function (string) {
         let result = Binary.from_string(string).join("");
 
         result = result.splitNth(6);
@@ -123,11 +123,11 @@ var Base64 = {
 }
 
 class message_url {
-    constructor(url = window.location.href){
-this.url = url;
-        
+    constructor(url = window.location.href) {
+        this.url = url;
+
         let _subdirectories = new URL(window.location.href).pathname.split("/").filter(subdirectory => subdirectory.length > 0);
-        
+
         this.guildID = _subdirectories[1];
         this.channelID = _subdirectories[2];
     }
@@ -138,28 +138,51 @@ class User {
         this.token = token;
         this.id = Base64.decode(token.match("^[^.]+")[0]);
         this.url_config = url_config;
-        
+
         this.message = {
-            get_last_message: async() => {
-                let result = "";
-                
-            let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages?limit=1`, {
-  "headers": {
-    "authorization": this.token,
-  },
-  "method": "GET",
-}).then(data => data.json()).then(response => {result = response[0].id});
+            get_last_message: async () => {
+                let result = null;
+
+                let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages?limit=1`, {
+                    "headers": {
+                        "authorization": this.token,
+                    },
+                    "method": "GET",
+                }).then(data => data.json()).then(response => {
+                    if (response.length > 0) {
+                        result = response[0].id;
+                    }
+                });
+
                 return result;
             },
             get_last_user_message: async () => {
-            let result = "";
-                
-            let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/search?author_id=${this.id}`, {
-  "headers": {
-    "authorization": this.token,
-  },
-  "method": "GET",
-}).then(data => data.json()).then(response => {result = response.messages[0][0].id});
+                let result = null;
+
+                let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages?limit=100`, {
+                    "headers": {
+                        "authorization": this.token,
+                    },
+                    "method": "GET",
+                }).then(data => data.json()).then(response => {
+                    response = response.filter(message => message.author.id == this.id);
+                    if (response.length > 0) {
+                        result = response[0].id;
+                    }
+                })
+
+                if (!result) {
+                    let fetched1 = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/search?author_id=${this.id}`, {
+                        "headers": {
+                            "authorization": this.token,
+                        },
+                        "method": "GET",
+                    }).then(data => data.json()).then(response => {
+                        if (response.messages.length > 0) {
+                            result = response.messages[0][0].id;
+                        }
+                    });
+                }
                 return result;
             },
             send: (text) => {
@@ -180,7 +203,7 @@ class User {
                 });
             },
             delete: async (id) => {
-                if (!id){
+                if (!id) {
                     id = await this.message.get_last_user_message();
                 }
 
@@ -193,10 +216,10 @@ class User {
                 });
             },
             edit: async (text, id) => {
-                                if (!id){
+                if (!id) {
                     id = await this.message.get_last_user_message();
                 }
-                
+
                 let body = {
                     "mobile_network_type": "unknown",
                     "content": text,
@@ -214,10 +237,10 @@ class User {
                 });
             },
             reply: async (text, id) => {
-                if (!id){
+                if (!id) {
                     id = await this.message.get_last_message();
                 }
-                
+
                 let body = {
                     "mobile_network_type": "unknown",
                     "message_reference": {
