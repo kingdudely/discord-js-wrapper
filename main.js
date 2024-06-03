@@ -122,44 +122,44 @@ var Base64 = {
     }
 }
 
-class location_config {
-    constructor(url = window.location.href) {
-        this.url = url;
-        this.channelID = url.substr(url.lastIndexOf("/") + 1);
-        this.guildID = url.substr(url.substr(0, url.lastIndexOf("/")).lastIndexOf("/") + 1, url.lastIndexOf("/") - url.substr(0, url.lastIndexOf("/")).lastIndexOf("/") - 1);
+class message_url {
+    constructor(url = window.location.href){
+this.url = url;
+        
+        let _subdirectories = new URL(window.location.href).pathname.split("/").filter(subdirectory => subdirectory.length > 0);
+        
+        this.guildID = _subdirectories[1];
+        this.channelID = _subdirectories[2];
     }
 }
 
 class User {
-    constructor(token = run("getToken"), url_config = new location_config()) {
+    constructor(token = run("getToken"), url_config = new message_url()) {
         this.token = token;
-        this.url_config = url_config;
         this.id = Base64.decode(token.match("^[^.]+")[0]);
+        this.url_config = url_config;
+        
         this.message = {
-            get_last_message: async () => {
+            get_last_message: async() => {
                 let result = "";
-
-                let fetched = await fetch(`https://discord.com/api/v9/channels/${url_config.channelID}/messages?limit=1`, {
-                    "headers": {
-                        "authorization": this.token,
-                    },
-                    "method": "GET",
-                }).then(data => data.json()).then(response => {
-                    result = response[0].id
-                });
+                
+            let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages?limit=1`, {
+  "headers": {
+    "authorization": this.token,
+  },
+  "method": "GET",
+}).then(data => data.json()).then(response => {result = response[0].id});
                 return result;
             },
             get_last_user_message: async () => {
-                let result = "";
-
-                let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/search?author_id=${this.id}`, {
-                    "headers": {
-                        "authorization": this.token,
-                    },
-                    "method": "GET",
-                }).then(data => data.json()).then(response => {
-                    result = response.messages[0][0].id
-                });
+            let result = "";
+                
+            let fetched = await fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/search?author_id=${this.id}`, {
+  "headers": {
+    "authorization": this.token,
+  },
+  "method": "GET",
+}).then(data => data.json()).then(response => {result = response.messages[0][0].id});
                 return result;
             },
             send: (text) => {
@@ -180,7 +180,7 @@ class User {
                 });
             },
             delete: async (id) => {
-                if (!id) {
+                if (!id){
                     id = await this.message.get_last_user_message();
                 }
 
@@ -193,10 +193,10 @@ class User {
                 });
             },
             edit: async (text, id) => {
-                if (!id) {
+                                if (!id){
                     id = await this.message.get_last_user_message();
                 }
-
+                
                 let body = {
                     "mobile_network_type": "unknown",
                     "content": text,
@@ -214,10 +214,10 @@ class User {
                 });
             },
             reply: async (text, id) => {
-                if (!id) {
+                if (!id){
                     id = await this.message.get_last_message();
                 }
-
+                
                 let body = {
                     "mobile_network_type": "unknown",
                     "message_reference": {
