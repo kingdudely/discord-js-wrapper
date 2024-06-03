@@ -156,6 +156,7 @@ class User {
 
                 return result;
             },
+
             get_last_user_message: async () => {
                 let result = null;
 
@@ -185,6 +186,7 @@ class User {
                 }
                 return result;
             },
+
             send: (text) => {
                 let body = {
                     "mobile_network_type": "unknown",
@@ -193,6 +195,7 @@ class User {
                     "tts": false,
                     "flags": 0
                 };
+
                 fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages`, {
                     "headers": {
                         "authorization": this.token,
@@ -202,6 +205,7 @@ class User {
                     "method": "POST",
                 });
             },
+
             delete: async (id) => {
                 if (!id) {
                     id = await this.message.get_last_user_message();
@@ -215,6 +219,7 @@ class User {
                     "method": "DELETE",
                 });
             },
+
             edit: async (text, id) => {
                 if (!id) {
                     id = await this.message.get_last_user_message();
@@ -227,6 +232,7 @@ class User {
                     "tts": false,
                     "flags": 0
                 };
+
                 fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages/${id}`, {
                     "headers": {
                         "authorization": this.token,
@@ -236,6 +242,7 @@ class User {
                     "method": "PATCH",
                 });
             },
+
             reply: async (text, id) => {
                 if (!id) {
                     id = await this.message.get_last_message();
@@ -253,6 +260,7 @@ class User {
                     "tts": false,
                     "flags": 0
                 };
+
                 fetch(`https://discord.com/api/v9/channels/${this.url_config.channelID}/messages`, {
                     "headers": {
                         "authorization": this.token,
@@ -262,6 +270,19 @@ class User {
                     "method": "POST",
                 });
             },
+
+            react: async (emoji, id) => {
+                if (!id) {
+                    id = await this.message.get_last_message();
+                }
+
+                fetch(`https://discord.com/api/v9/channels/1097506908308508783/messages/${id}/reactions/${encodeURI(emoji)}/%40me?location=Message&type=0`, {
+                    "headers": {
+                        "authorization": this.token,
+                    },
+                    "method": "PUT",
+                })
+            }
         };
     }
 }
