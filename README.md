@@ -1,5 +1,5 @@
 # discord js wrapper
-cool little thing that can send and delete and edit messages using the developer console in discord (For now)
+cool little discord api javascript wrapper 
 
 # usage
 
