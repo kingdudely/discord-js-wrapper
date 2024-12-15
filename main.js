@@ -47,98 +47,35 @@ var discord = {
             }
         }
     },
-    libraries: {
-        Binary: {
-            get_bit_count: function(n) {
-                let result = 0;
 
-                while (n !== 0) {
-                    n = n >> 1;
-                    result++;
-                }
-
-                return result;
-            },
-
-            from_decimal: function(n, minBitCount = 0) {
-                let result = "";
-                let nBits = this.get_bit_count(n);
-
-                for (i = nBits - 1; i >= 0; i--) {
-                    result += ((n >> i) & 1).toString()
-                }
-
-                result = "0".repeat((minBitCount || result.length) - result.length) + result;
-
-                return result || "0";
-            },
-
-            to_decimal: function(binary) {
-                let result = 0;
-
-                for (i = binary.length - 1; i >= 0; i--) {
-                    result += (2 ** ((binary.length - 1) - i)) * parseInt(binary.charAt(i));
-                }
-
-                return result;
-            },
-
-            from_string: function(string) {
-                let result = [];
-
-                for (let i = 0; i < string.length; i++) {
-                    result[i] = this.from_decimal(string.charCodeAt(i), 8);
-                }
-
-                return result;
-            }
-        },
-
-        Base64: {
-            _valid_characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
-            decode: function(string) {
-                string = string.replaceAll("=", "");
-                let result = [];
-                for (let i = 0; i < string.length; i++) {
-                    result[i] = discord.libraries.Binary.from_decimal(this._valid_characters.indexOf(string[i]), 8).substr(2);
-                }
-                result = result.join("").splitNth(8);
-
-                if (result[result.length - 1].length < 8) {
-                    result.pop();
-                }
-
-                for (let i = 0; i < result.length; i++) {
-                    result[i] = String.fromCharCode(discord.libraries.Binary.to_decimal(result[i]));
-                }
-
-                return result.join("");
-            },
-
-            encode: function(string) {
-                let result = discord.libraries.Binary.from_string(string).join("");
-
-                result = result.splitNth(6);
-
-                result[result.length - 1] += "0".repeat(6 - result[result.length - 1].length);
-
-                for (let i = 0; i < result.length; i++) {
-                    result[i] = this._valid_characters.charAt(discord.libraries.Binary.to_decimal(result[i]));
-                }
-
-                while (result.length % 4 !== 0) {
-                    result.push("=");
-                }
-
-                return result.join("");
-            }
-        }
-    },
     User: class {
         constructor(token = discord.run("getToken"), url_config = new message_url()) {
             this.token = token;
-            this.id = discord.libraries.Base64.decode(token.match("^[^.]+")[0]);
+            this.id = atob(token.match("^[^.]+")[0]);
             this.url_config = url_config;
+
+            this.actions = {
+                block: async (id) => {
+                    fetch(`https://discord.com/api/v9/users/@me/relationships/${id}`, {
+                        "headers": {
+                            "authorization": this.token,
+                            "content-type": "application/json",
+                        },
+                        "body": "{\"type\":2}",
+                        "method": "PUT",
+                    })
+                },
+
+                unblock: async (id) => {
+                    fetch(`https://discord.com/api/v9/users/@me/relationships/${id}`, {
+                        "headers": {
+                            "authorization": this.token,
+                            "content-type": "application/json",
+                        },
+                        "method": "DELETE",
+                    });
+                }
+            }
 
             this.message = {
                 get_last_message: async () => {
@@ -298,7 +235,7 @@ var discord = {
                         },
                         "method": "DELETE",
                     })
-                }
+                },
             };
         }
     }
