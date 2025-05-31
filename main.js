@@ -1,142 +1,94 @@
-{
-    const apiUrl = "https://discord.com/api/v9";
+var Discord = {
+	apiUrl: "https://discord.com/api/v9",
 
-    var Discord = {
-        get: function (name) {
-            let webpackRequire; // get all webpack modules
+	get: function (name) {
+		let webpackRequire; // get all webpack modules
 
-            webpackChunkdiscord_app.push([
-                [Date.now()],
-                {},
-                result => webpackRequire = result,
-            ]);
+		webpackChunkdiscord_app.push([
+			[Date.now()],
+			{},
+			result => webpackRequire = result,
+		]);
 
-            for (const { exports, id } of Object.values(webpackRequire.c)) {
-                if (typeof(exports?.[name]) === "function") {
-                    return exports[name];
-                }
-                else if (id === name) {
-                    return exports;
-                }
-                /*
-                try {
-                    return exports[name]();
-                }
-                catch {
-                    if (id === name) {
-                        return exports;
-                    }
-                } 
-                */
-            }
-        },
+		for (const { exports, id } of Object.values(webpackRequire.c)) {
+			if (typeof(exports?.[name]) === "function") {
+				return exports[name];
+			}
+			else if (id === name) {
+				return exports;
+			}
+		}
+	},
 
-        User: class {
-            fetchApi(api, method, body) {
-                return fetch(apiUrl + api, {
-                    "headers": {
-                        "authorization": this.token,
-                        "content-type": "application/json",
-                    },
-                    body: JSON.stringify(body),
-                    method
-                })
-            }
+	User: class {
+		async fetchApi(api, method, body) {
+			return (await fetch(Discord.apiUrl + api, {
+				"headers": {
+					"authorization": this.token,
+					"content-type": "application/json",
+				},
+				body: JSON.stringify(body),
+				method
+			})).json();
+		}
 
-            setIDsFromURL(url = window.location.href) {
-                [, this.guildID, this.channelID] = new URL(url).pathname.split("/").filter(Boolean);
-            }
+		setIDsFromURL(url = window.location.href) {
+			[, this.guildID, this.channelID] = new URL(url).pathname.split("/").filter(Boolean);
+		}
 
-            get userID() { // readonly
-                return atob(this.token.split(".")[0]);
-            }
+		get userID() { // readonly
+			return atob(this.token.split(".")[0]);
+		}
 
-            constructor(token = Discord.get("getToken")()) {
-                this.setIDsFromURL();
-                this.token = token;
+		constructor(token = Discord.get("getToken")()) {
+			this.setIDsFromURL();
+			this.token = token;
 
-                this.messages.getLastUserMessage().then(messageID => this.messageID = messageID);
-            }
+			this.messages.getLastUserMessage().then(messageID => this.messageID = messageID); // Can't make constructor async
+		}
 
-            actions = {
-                block: userID => {
-                    this.fetchApi("/users/@me/relationships/" + userID, "PUT", {
-                        "type": 2,
-                    });
-                },
+		actions = {
+			block: userID => this.fetchApi("/users/@me/relationships/" + userID, "PUT", { type: 2 }),
+			unblock: userID => this.fetchApi("/users/@me/relationships/" + userID, "DELETE"),
+		}
 
-                unblock: userID => {
-                    this.fetchApi("/users/@me/relationships/" + userID, "DELETE");
-                }
-            }
+		messages = {
+			getLastMessage: async () => (await this.fetchApi(`/channels/${this.channelID}/messages?limit=1`))?.[0].id,
+			getLastUserMessage: async () => (await this.fetchApi(`/channels/${this.channelID}/messages?limit=100`)).find(message => message?.author.id === this.userID)?.id) ?? (await this.fetchApi(`/channels/${this.channelID}/messages/search?author_id=` + this.userID))?.messages[0][0].id,
 
-            messages = {
-                getLastMessage: async () => {
-                    return this.fetchApi(`/channels/${this.channelID}/messages?limit=1`)
-                        .then(data => data.json())
-                        .then(response => response?.[0].id);
-                },
+			send: text => this.fetchApi(`/channels/${this.channelID}/messages`, "POST", {
+				"mobile_network_type": "unknown",
+				"content": text,
+				"nonce": Date.now(),
+				"tts": false,
+				"flags": 0
+			}),
 
-                getLastUserMessage: async () => {
-                    return (await this.fetchApi(`/channels/${this.channelID}/messages?limit=100`)
-                        .then(data => data.json())
-                        .then(response => response.find(message => message?.author.id === this.userID)?.id)
-                    )
+			delete: () => this.fetchApi(`/channels/${this.channelID}/messages/` + this.messageID, "DELETE"),
 
-                        ??
+			edit: text => this.fetchApi(`/channels/${this.channelID}/messages/` + this.messageID, "PATCH", {
+				"mobile_network_type": "unknown",
+				"content": text,
+				"nonce": Date.now(),
+				"tts": false,
+				"flags": 0
+			}),
 
-                        this.fetchApi(`/channels/${this.channelID}/messages/search?author_id=` + this.userID)
-                            .then(data => data.json())
-                            .then(response => response?.messages[0][0].id);
-                },
+			reply: text => this.fetchApi(`/channels/${this.channelID}/messages`, "POST", {
+				"mobile_network_type": "unknown",
+				"message_reference": {
+					"message_id": this.messageID,
+					"channel_id": this.channelID,
+					"guild_id": this.guildID !== "@me" ? this.guildID : null
+				},
+				"content": text,
+				"nonce": Date.now(),
+				"tts": false,
+				"flags": 0
+			}),
 
-                send: text => {
-                    this.fetchApi(`/channels/${this.channelID}/messages`, "POST", {
-                        "mobile_network_type": "unknown",
-                        "content": text,
-                        "nonce": Date.now(),
-                        "tts": false,
-                        "flags": 0
-                    });
-                },
-
-                delete: () => {
-                    this.fetchApi(`/channels/${this.channelID}/messages/` + this.messageID, "DELETE")
-                },
-
-                edit: text => {
-                    this.fetchApi(`/channels/${this.channelID}/messages/` + this.messageID, "PATCH", {
-                        "mobile_network_type": "unknown",
-                        "content": text,
-                        "nonce": Date.now(),
-                        "tts": false,
-                        "flags": 0
-                    });
-                },
-
-                reply: text => {
-                    this.fetchApi(`/channels/${this.channelID}/messages`, "POST", {
-                        "mobile_network_type": "unknown",
-                        "message_reference": {
-                            "message_id": this.messageID,
-                            "channel_id": this.channelID,
-                            "guild_id": this.guildID !== "@me" && this.guildID // : null
-                        },
-                        "content": text,
-                        "nonce": Date.now(),
-                        "tts": false,
-                        "flags": 0
-                    });
-                },
-
-                react: emoji => {
-                    this.fetchApi(`/channels/${this.channelID}/messages/${this.messageID}/reactions/${encodeURIComponent(emoji)}/%40me?location=Message`, "PUT")
-                },
-
-                unreact: emoji => {
-                    this.fetchApi(`/channels/${this.channelID}/messages/${this.messageID}/reactions/${encodeURIComponent(emoji)}/%40me?location=Message`, "DELETE")
-                },
-            };
-        }
-    }
+			react: emoji => this.fetchApi(`/channels/${this.channelID}/messages/${this.messageID}/reactions/${encodeURIComponent(emoji)}/%40me?location=Message`, "PUT"),
+			unreact: emoji => this.fetchApi(`/channels/${this.channelID}/messages/${this.messageID}/reactions/${encodeURIComponent(emoji)}/%40me?location=Message`, "DELETE"),
+		};
+	}
 }
