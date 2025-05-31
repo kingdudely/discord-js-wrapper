@@ -54,7 +54,7 @@ var Discord = {
 
 		messages = {
 			getLastMessage: async () => (await this.fetchApi(`/channels/${this.channelID}/messages?limit=1`))?.[0].id,
-			getLastUserMessage: async () => (await this.fetchApi(`/channels/${this.channelID}/messages?limit=100`)).find(message => message?.author.id === this.userID)?.id) ?? (await this.fetchApi(`/channels/${this.channelID}/messages/search?author_id=` + this.userID))?.messages[0][0].id,
+			getLastUserMessage: async () => (await this.fetchApi(`/channels/${this.channelID}/messages?limit=100`)).find(message => message?.author.id === this.userID)?.id ?? (await this.fetchApi(`/channels/${this.channelID}/messages/search?author_id=` + this.userID))?.messages[0][0].id,
 
 			send: text => this.fetchApi(`/channels/${this.channelID}/messages`, "POST", {
 				"mobile_network_type": "unknown",
