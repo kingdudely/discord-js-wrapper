@@ -1,9 +1,10 @@
-globalThis.Discord = {
+globalThis.Discord = {	
 	get modules() {
 		return webpackChunkdiscord_app.push([[Symbol()], {}, m => m])?.c ?? {} // Math.random() or Date.now()
 	},
 
 	apiUrl: "https://discord.com/api/v9",
+	findModule: find => Object.values(Discord.modules).map(x => x?.exports?.default ?? x?.exports).filter(Boolean).find(find),
 
 	User: class {
 		id = {
@@ -24,7 +25,7 @@ globalThis.Discord = {
 			[, this.id.guild, this.id.channel] = new URL(url).pathname.split("/").filter(Boolean);
 		}
 
-		constructor(token = Object.values(Discord.modules).map(x => x?.exports?.default ?? x?.exports).filter(Boolean).find(m => m?.getToken)?.getToken()) {
+		constructor(token = Discord.findModule(m => typeof m?.getToken === "function")?.getToken()) {
 			this.setIDsFromURL();
 			this.token = token;
 
