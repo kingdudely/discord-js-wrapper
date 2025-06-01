@@ -14,11 +14,11 @@ var Discord = {
 			.map(x => x?.exports)
 			.filter(Boolean)
 			.forEach(m => {
-				if (m?.default && m?.default?.[name]) {
-					return copy(m.default.getToken());
+				if (m?.default && m?.default?.[name] !== undefined) {
+					return m.default[name];
 				}
-				if (m?.getToken !== undefined) {
-					return copy(m.getToken());
+				if (m?.[name] !== undefined) {
+					return m[name];
 				}
 			});
 	},
