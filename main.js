@@ -10,14 +10,17 @@ var Discord = {
 			result => webpackRequire = result,
 		]);
 
-		for (const { exports, id } of Object.values(webpackRequire.c)) {
-			if (typeof(exports?.[name]) === "function") {
-				return exports[name];
-			}
-			else if (id === name) {
-				return exports;
-			}
-		}
+		Object.values(webpackRequire.c ?? {})
+			.map(x => x?.exports)
+			.filter(Boolean)
+			.forEach(m => {
+				if (m?.default && m?.default?.[name]) {
+					return copy(m.default.getToken());
+				}
+				if (m?.getToken !== undefined) {
+					return copy(m.getToken());
+				}
+			});
 	},
 
 	User: class {
